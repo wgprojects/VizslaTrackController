@@ -85,7 +85,7 @@ int main(void)
    int timeouts = 0;
    int maxTimeouts = 100;
 
-   int rs485Error = 1;
+   int rs485Error = 0;
    int error = 0;
    double totaldistance = 0;			
    time_t lastAttemptTime = time(NULL);
@@ -114,7 +114,8 @@ int main(void)
 	  if((fp = fopen("/home/www/VTsettings", "r")) == NULL)
 	  {
 		 cll;
-		 printf("Fail\n");
+		 printf("Missing /home/www/VTsettings file\n");
+		 printf("X\nX\nX\nX\n");
 		 readPSettingsAttempts++;
 		 if(readPSettingsAttempts > maxReadSettingsAttempts)
 		 {
@@ -127,6 +128,8 @@ int main(void)
 	  }
 	  else
 	  {
+		 cll;
+		 printf("Read /home/www/VTsettings\n");
 		 readPSettingsAttempts = 0;
 		 
 		 
@@ -143,6 +146,11 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
+		 else
+		 {
+			cll;
+			printf("Missing boostVal\n");
+		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -156,6 +164,11 @@ int main(void)
 			   dirty = 1;
 			   writeDirty = 1;
 			}
+		 }
+		 else
+		 {
+			cll;
+			printf("Missing slowVal\n");
 		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
@@ -171,6 +184,11 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
+		 else
+		 {
+			cll;
+			printf("Missing fastVal\n");
+		 }
 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -185,6 +203,11 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
+		 else
+		 {
+			cll;
+			printf("Missing runVal\n");
+		 }
 
 		 fclose(fp);
 	  }
@@ -194,13 +217,17 @@ int main(void)
 		 //Do nothing. If the file doesn't exist, continue with last settings!
 		 //If we start with setting of "off" this works well.
 		 //If website re-writes "start" the user wants it to go!
+		 cll;
+ 		 printf("Missing /tmp/VTsettings file\n");
+		 printf("X\nX\n");
+
 	  }
 	  else
 	  {
+		 cll;
+ 		 printf("Read /tmp/VTsettings file\n");
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
-			cll;
-			printf(readBuff);
 			int latestCmdSpeed = atoi(readBuff);	
 			cll;
 		 	printf("Read commanded cmdSpeed: %d\n", latestCmdSpeed);
@@ -215,6 +242,11 @@ int main(void)
 				  firstRunWrite = 1;
 			}
 		 }
+		 else
+		 {
+			cll;
+			printf("Missing cmdSpeed\n");
+		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -228,6 +260,11 @@ int main(void)
 			   dirty = 1;
 			   writeDirty = 1;
 			}
+		 }
+		 else
+		 {
+			cll;
+			printf("Missing cmdBoost\n");
 		 }
 		 fclose(fp);
 		 remove("/tmp/VTsettings");
@@ -304,7 +341,7 @@ int main(void)
 
 
 		uint16_t desiredRunState = (currentFreqSetpoint >= 18);
-		if(firstRunWrite)
+		if(firstRunWrite || desiredRunState==0)
 		{
 			if(modbus_write_register(ctx, addr, desiredRunState) < 0)         
 			{
@@ -317,6 +354,10 @@ int main(void)
 				printf("Successfully wrote Run state %d\n", desiredRunState);
 				firstRunWrite = 0;
 			}
+		}
+		else
+		{
+			printf("X\n");
 		}
 
 		if(modbus_write_register(ctx, addr2, currentFreqSetpoint) < 0)
@@ -334,7 +375,10 @@ int main(void)
 
 #endif
 	}
-
+	else
+	{
+		printf("X\nX\n");
+	}
 	
 
 	int forceRetry = file_exists_delete("/tmp/VTforceretry");
@@ -376,8 +420,11 @@ int main(void)
   
 		 if(modbus_read_registers(ctx, 0x2100, 12, data) < 0)
 		 {
-			 fprintf(stderr, "Read failed: %s\n",
+	  		cll;
+			fprintf(stderr, "Read failed: %s\n",
 			   modbus_strerror(errno));
+	  		
+			printf("X\n");
 			dirty = 1;
 			
 			rs485Error++;
@@ -385,7 +432,12 @@ int main(void)
 			   sleep(10);
 		 }
 		 else
-		 { 
+		 {
+	  		cll;
+			printf("Read successful\n");
+			
+			printf("X\n");
+			
 			rs485Error=0;
 			status1 = data[0];
 			status2 = data[1];
@@ -397,6 +449,14 @@ int main(void)
 			//loadPct = data[10];
 			
 			kmh = 0.02743 * (double)motorrpm;
+
+			//double frac = kmh * 50 / 1000;
+			//double dist = frac / 3600;
+			double ms_per_hour = 1000 * 3600; //number of ms in 1 hour
+			double mm_per_km = 1000*100*10;
+			double dist = kmh * (mm_per_km * 50 / ms_per_hour);
+
+			totaldistance += dist;
 		 }
 
 
@@ -406,8 +466,9 @@ int main(void)
 	}	
 	else
 	{
+		 printf("X\n");
 		 cll;
-		 printf("rs485Error=%d   secondsLeft=%ld\n", rs485Error, 60+lastAttemptTime-currTime);
+		 printf("rs485Error=%d   secondsLeft=%ld\n", rs485Error, 20+lastAttemptTime-currTime);
 	}
 	
 	  cll;
@@ -442,7 +503,7 @@ int main(void)
 	     	 fprintf(fp, "%f\n", dcvoltage/10.0);
 	     	 fprintf(fp, "%d\n", motorrpm);
 	     	 fprintf(fp, "%f\n", kmh);
-	     	 fprintf(fp, "%f\n", totaldistance);
+	     	 fprintf(fp, "%f\n", totaldistance/1000000);
 		 fprintf(fp, "%d\n", currentBoostVal);
 		 fprintf(fp, "%d\n", currentSlowVal);
 		 fprintf(fp, "%d\n", currentFastVal);
@@ -451,6 +512,20 @@ int main(void)
 	  }
 	  rename("/tmp/statusTmp", "/tmp/status");
 
+	  cll;
+	  printf("%.1f freq\n", actualFreq/10.0);
+	  cll;
+	  printf("%.1f output amps\n", outputAmps/10.0);
+	  cll;
+	  printf("%.1f output volts\n", outputvoltage/10.0);
+	  cll;
+	  printf("%.1f DC bus volts\n", dcvoltage/10.0);
+	  cll;
+	  printf("%d RPM\n", motorrpm);
+	  cll;
+	  printf("%.3f km/h\n", kmh);
+	  cll;
+	  printf("%.6f km\n", totaldistance/100000);
 
 	  usleep(50000);
 	  continue; 
