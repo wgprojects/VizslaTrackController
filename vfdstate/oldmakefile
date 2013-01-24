@@ -1,0 +1,31 @@
+OPENWRT_SDK=$(HOME)/dev/OpenWrt-sdk/
+OPENWRT_TOOLCHAIN=$(OPENWRT_SDK)staging_dir/toolchain-mips_r2_gcc-4.3.3+cs_uClibc-0.9.30.1
+export PATH:=$(OPENWRT_TOOLCHAIN)/usr/bin:$(PATH)
+export LDFLAGS=-L$(OPENWRT_TOOLCHAIN)/usr/lib -L$(OPENWRT_TOOLCHAIN)/lib -Wl,-rpath- link=$(OPENWRT_TOOLCHAIN)/lib/
+export PKG_CONFIG_PATH=$(HOME)/dev/vfdc/libmodbus-3.0.3/
+export CC=$(OPENWRT_TOOLCHAIN)/usr/bin/mips-openwrt-linux-gcc
+export LD=mips-openwrt-linux-ld
+export STAGING_DIR=$(OPENWRT_TOOLCHAIN)/staging_dir
+
+
+default: vfdcomm
+
+vfdcomm.o: main.c 
+	export PATH
+	echo $(PATH)
+	whereis mips-openwrt-linux-gcc
+	echo
+	echo
+	$(CC) $(LDFLAGS) main.c -o vfdcomm.o
+
+vfdcomm: vfdcomm.o
+	echo
+	echo
+	export PATH
+	$(CC) $(LDFLAGS) vfdcomm.o -o vfdcomm `pkg-config --cflags --libs libmodbus`
+
+
+
+clean:
+	rm -f vfdcomm.o
+	rm -f vfdcomm

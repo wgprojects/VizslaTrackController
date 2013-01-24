@@ -1,0 +1,3 @@
+instead of ./runme.sh, use instead . ./runme.sh
+
+When building, don't use 'make' use 'make -f Makefile.mips'

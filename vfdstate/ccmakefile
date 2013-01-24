@@ -1,0 +1,15 @@
+
+
+default: vfdcomm
+
+vfdcomm.o: main.c 
+	../../openwrt/trunk/build_dir/target-mips_r2_uClibc-0.9.33.2/OpenWrt-Toolchain-ar71xx-for-mips_r2-gcc-4.6-linaro_uClibc-0.9.33.2/toolchain-mips_r2_gcc-4.6-linaro_uClibc-0.9.33.2/bin/mips-openwrt-linux-gcc -c -static -s main.c -o vfdcomm.o 
+
+vfdcomm: vfdcomm.o
+	../../openwrt/trunk/build_dir/target-mips_r2_uClibc-0.9.33.2/OpenWrt-Toolchain-ar71xx-for-mips_r2-gcc-4.6-linaro_uClibc-0.9.33.2/toolchain-mips_r2_gcc-4.6-linaro_uClibc-0.9.33.2/bin/mips-openwrt-linux-gcc -static -s  vfdcomm.o -o vfdcomm `pkg-config --cflags --libs libmodbus`
+
+
+
+clean:
+	rm -f vfdcomm.o
+	rm -f vfdcomm
