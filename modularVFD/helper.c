@@ -12,6 +12,21 @@ const char* byte_to_binary( short int x )
    return b;
 }
 
+double ms_uptime(void)
+{
+    FILE *in=fopen("/proc/uptime", "r");
+    double retval=0;
+    char tmp[256]={0x0};
+    if(in!=NULL)
+    {
+    	fgets(tmp, sizeof(tmp), in);
+    	retval=atof(tmp);
+    	fclose(in);
+    }
+    return retval*1000;
+			        
+}
+
 int file_exists_delete(const char * filename)
 {
    FILE *file;

@@ -1,10 +1,10 @@
-#include <stdio.h>                                                                                                                                                 
-#include <unistd.h>
-#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <time.h>
-#include <stdint.h>
 #include "../libmodbus-3.0.3/src/modbus.h"
 #include "helper.c"
 
@@ -61,6 +61,10 @@ int main(void)
    int dirty = 1; //Needs reading
    int writeDirty = 1; //Needs writing 
    time_t lastReadTime = time(NULL);
+
+   //struct timeval lastSuccessfulRead;
+   double lastSuccessfulRead;
+   int lastRead_validSpeed = 0;
    
    unsigned short status1 = 0;
    unsigned short status2 = 0;
@@ -104,6 +108,7 @@ int main(void)
    int numWrites = 0;
 
    time_t lastImmediateUpdateRequiredTime=0;
+
 
    printf("%c[2J", 27);
    while(1)
@@ -420,10 +425,13 @@ int main(void)
   
 		 if(modbus_read_registers(ctx, 0x2100, 12, data) < 0)
 		 {
+			lastRead_validSpeed = 0;
 	  		cll;
 			fprintf(stderr, "Read failed: %s\n",
 			   modbus_strerror(errno));
 	  		
+			printf("X\n");
+			printf("X\n");
 			printf("X\n");
 			dirty = 1;
 			
@@ -436,7 +444,6 @@ int main(void)
 	  		cll;
 			printf("Read successful\n");
 			
-			printf("X\n");
 			
 			rs485Error=0;
 			status1 = data[0];
@@ -452,11 +459,31 @@ int main(void)
 
 			//double frac = kmh * 50 / 1000;
 			//double dist = frac / 3600;
-			double ms_per_hour = 1000 * 3600; //number of ms in 1 hour
-			double mm_per_km = 1000*100*10;
-			double dist = kmh * (mm_per_km * 50 / ms_per_hour);
 
-			totaldistance += dist;
+			//timeval now;
+		       	//gettimeofday(&now, NULL);
+			double uptime = ms_uptime();
+
+
+			double mm_per_km = 1000*100*10;
+			//double sec = ((now.tv_sec - lastSuccessfulRead.tv_sec) + (now.tv_usec - lastSuccessfulRead.tv_usec)/1000000);
+			double sec = (uptime - lastSuccessfulRead)/1000;
+			double dist = kmh * (mm_per_km * sec/3600);
+
+			//gettimeofday(&lastSuccessfulRead, NULL);
+			lastSuccessfulRead = uptime;
+
+			cll;
+			printf("Seconds elapsed this sample: %f\n", sec); 
+			cll;
+			printf("mm travelled this sample: %f\n", dist); 
+
+			printf("X\n");
+			if(lastRead_validSpeed)
+			{
+				totaldistance += dist;
+			}
+			lastRead_validSpeed=1;
 		 }
 
 
@@ -466,6 +493,8 @@ int main(void)
 	}	
 	else
 	{
+		 printf("X\n");
+		 printf("X\n");
 		 printf("X\n");
 		 cll;
 		 printf("rs485Error=%d   secondsLeft=%ld\n", rs485Error, 20+lastAttemptTime-currTime);
@@ -525,7 +554,9 @@ int main(void)
 	  cll;
 	  printf("%.3f km/h\n", kmh);
 	  cll;
-	  printf("%.6f km\n", totaldistance/100000);
+	  printf("%.6f km\n", totaldistance/1000000);
+	  cll;
+	  printf("\n");
 
 	  usleep(50000);
 	  continue; 
@@ -534,3 +565,5 @@ int main(void)
   }
    return 0;
 }
+
+
