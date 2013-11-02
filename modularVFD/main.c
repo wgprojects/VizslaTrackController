@@ -353,7 +353,7 @@ int main(void)
 		SIMdcvoltage = 3350;
 
 
-		SIMkmh = 0.02743 * (double)SIMmotorrpm;
+		SIMkmh = 0.0259 * (double)SIMmotorrpm; //17 inches is circumference; 17in/min is 0.0259km/h
 		 
 
 #else
@@ -480,7 +480,8 @@ int main(void)
 			motorrpm = data[7];
 			//loadPct = data[10];
 			
-			kmh = 0.02743 * (double)motorrpm;
+			kmh = 0.0259 * (double)motorrpm; //17 inches is circumference; 17in/min is 0.0259km/h
+
 
 			double mm_per_km = 1000*100*10;
 			double uptime = ms_uptime();
