@@ -150,6 +150,11 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
+		 else
+		 {
+			 cll;
+			 printf("Missing boostVal\n");
+		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -163,6 +168,11 @@ int main(void)
 			   dirty = 1;
 			   writeDirty = 1;
 			}
+		 }
+		 else
+		 {
+			 cll;
+			 printf("Missing slowVal\n");
 		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
@@ -178,6 +188,11 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
+		 else
+		 {
+			 cll;
+			 printf("Missing fastVal\n");
+		 }
 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -192,6 +207,11 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
+		 else
+		 {
+			 cll;
+			 printf("Missing runVal\n");
+		 }
 
 		 fclose(fp);
 	  }
@@ -203,7 +223,7 @@ int main(void)
 		 //If website re-writes "start" the user wants it to go!
 		 cll;
   		 printf("Missing /tmp/VTsettings file\n");
- 		 printf("X\nX\n");
+ 		 printf("X\n");
 	  }
 	  else
 	  {
@@ -330,7 +350,7 @@ int main(void)
 		}
 		else
 		{
-			printf("\n");
+			printf("X\n");
 		}
 
 		if(modbus_write_register(ctx, addr2, currentFreqSetpoint) < 0)
@@ -348,9 +368,13 @@ int main(void)
 
 #endif
 	}
+	else
+	{
+		printf("X\nX\n");
+	}
 
 
-int forceRetry = file_exists_delete("/tmp/VTforceretry");
+	int forceRetry = file_exists_delete("/tmp/VTforceretry");
 	time_t currTime = time(NULL);
 
 	if(actualFreq == 0 && currentFreqSetpoint == 0)
@@ -406,6 +430,8 @@ int forceRetry = file_exists_delete("/tmp/VTforceretry");
 			fprintf(stderr, "Read failed: %s\n",
 			   modbus_strerror(errno));
 			dirty = 1;
+
+			printf("X\nX\n");
 			
 			rs485Error++;
 			if(rs485Error > maxTimeouts)
@@ -452,6 +478,7 @@ int forceRetry = file_exists_delete("/tmp/VTforceretry");
 	{
 		 cll;
 		 printf("rs485Error=%d   secondsLeft=%ld\n", rs485Error, 20+lastAttemptTime-currTime);
+		 printf("X\n");
 	}
 	
 	  cll;
