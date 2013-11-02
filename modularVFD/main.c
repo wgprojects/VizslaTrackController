@@ -13,6 +13,9 @@
 
 int main(void)
 {
+   int timeout_s = 20;
+   time_t lastBoostValTime = time(NULL);
+
 #ifdef SIMULATE
 
 #else	
@@ -252,10 +255,12 @@ int main(void)
 			
 			if(currentCmdBoost != latestCmdBoost)
 			{
+			   lastBoostValTime = time(NULL);
 			   currentCmdBoost = latestCmdBoost;
 			   dirty = 1;
 			   writeDirty = 1;
 			}
+
 		 }
 		 fclose(fp);
 		 remove("/tmp/VTsettings");
@@ -265,27 +270,51 @@ int main(void)
 		 error = 0;
 
 
+	time_t curTime = time(NULL);
+
 	int currentFreqSetpoint; 
 	switch(currentCmdSpeed)
 	{
 		case 0: //Stopped
 			currentFreqSetpoint = 0; 
+			cll;
+			printf("Stopped.\n");
 			break;
 		case 1: //Slow 
 			currentFreqSetpoint = currentSlowVal; 
+			cll;
+			printf("No timeout.\n");
 			break;
 		case 2: //Fast
 			currentFreqSetpoint = currentFastVal; 
+			cll;
+			printf("No timeout.\n");
 			break;
 		case 3: //Run
-			currentFreqSetpoint = currentRunVal; 
-			currentFreqSetpoint += currentCmdBoost * currentBoostVal;
-			if(currentFreqSetpoint<18)
-				currentFreqSetpoint = 18;
+	
+			if(timeout_s + lastBoostValTime - curTime < 0)
+			{
+				cll;
+				printf("TIME OUT - user must change modes or slide the lure.\n");
+				currentFreqSetpoint = 0;
+				firstRunWrite = 1; //Allow user to easily start again, if we stopped due to timeout.
+				writeDirty = 1;
+			}
+			else
+			{
+				cll;
+		 		printf("Seconds until timeout=%ld\n", timeout_s+lastBoostValTime-curTime);
+				currentFreqSetpoint = currentRunVal; 
+				currentFreqSetpoint += currentCmdBoost * currentBoostVal;
+				if(currentFreqSetpoint<18)
+					currentFreqSetpoint = 18;
+			}
 			break;
 		default: //error
 			currentFreqSetpoint = 0; 
 			currentCmdSpeed = 0;
+			cll;
+			printf("ERROR - in default case.\n");
 			break;
 	}
 	if(currentFreqSetpoint < 0)
@@ -345,7 +374,9 @@ int main(void)
 		 	{
 				cll;
 				printf("Successfully wrote Run state %d\n", desiredRunState);
-				firstRunWrite = 0;
+	
+				if(desiredRunState != 0)
+					firstRunWrite = 0; //"use up" the firstRunWrite authorization ONLY if we're moving to a RUN state, not to stopped.
 			}
 		}
 		else
