@@ -19,12 +19,12 @@ double ms_uptime(void)
     char tmp[256]={0x0};
     if(in!=NULL)
     {
-    	fgets(tmp, sizeof(tmp), in);
-    	retval=atof(tmp);
-    	fclose(in);
+       fgets(tmp, sizeof(tmp), in);
+       retval=atof(tmp);
+       fclose(in);
     }
     return retval*1000;
-			        
+
 }
 
 int file_exists_delete(const char * filename)

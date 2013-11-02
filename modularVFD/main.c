@@ -1,15 +1,15 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>                                                                                                                                                 
 #include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <time.h>
+#include <stdint.h>
 #include "../libmodbus-3.0.3/src/modbus.h"
 #include "helper.c"
 
 #define cll printf("%c[K", 27)
-//#define SIMULATE
+//////#define SIMULATE
 
 int main(void)
 {
@@ -61,11 +61,10 @@ int main(void)
    int dirty = 1; //Needs reading
    int writeDirty = 1; //Needs writing 
    time_t lastReadTime = time(NULL);
-
-   //struct timeval lastSuccessfulRead;
-   double lastSuccessfulRead;
-   int lastRead_validSpeed = 0;
    
+   double lastSuccessfulRead = 0;
+   int lastRead_validSpeed = 0;
+
    unsigned short status1 = 0;
    unsigned short status2 = 0;
    int actualFreq = 0;
@@ -89,10 +88,12 @@ int main(void)
    int timeouts = 0;
    int maxTimeouts = 100;
 
-   int rs485Error = 0;
+   int rs485Error = 1;
    int error = 0;
    double totaldistance = 0;			
    time_t lastAttemptTime = time(NULL);
+   time_t stopTime = time(NULL);
+   int stopped = 1;
 
 //cmdSpeed = {stopped, slow, fast, run}
 //cmdBoost    = {-1, 0, 1}
@@ -107,9 +108,6 @@ int main(void)
    int numReads = 0;
    int numWrites = 0;
 
-   time_t lastImmediateUpdateRequiredTime=0;
-
-
    printf("%c[2J", 27);
    while(1)
    {
@@ -120,7 +118,8 @@ int main(void)
 	  {
 		 cll;
 		 printf("Missing /home/www/VTsettings file\n");
-		 printf("X\nX\nX\nX\n");
+ 		 printf("X\nX\nX\nX\n");
+
 		 readPSettingsAttempts++;
 		 if(readPSettingsAttempts > maxReadSettingsAttempts)
 		 {
@@ -133,8 +132,8 @@ int main(void)
 	  }
 	  else
 	  {
-		 cll;
-		 printf("Read /home/www/VTsettings\n");
+	  	 cll;
+  		 printf("Read /home/www/VTsettings\n");
 		 readPSettingsAttempts = 0;
 		 
 		 
@@ -151,11 +150,6 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
-		 else
-		 {
-			cll;
-			printf("Missing boostVal\n");
-		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -169,11 +163,6 @@ int main(void)
 			   dirty = 1;
 			   writeDirty = 1;
 			}
-		 }
-		 else
-		 {
-			cll;
-			printf("Missing slowVal\n");
 		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
@@ -189,11 +178,6 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
-		 else
-		 {
-			cll;
-			printf("Missing fastVal\n");
-		 }
 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -208,11 +192,6 @@ int main(void)
 			   writeDirty = 1;
 			}
 		 }
-		 else
-		 {
-			cll;
-			printf("Missing runVal\n");
-		 }
 
 		 fclose(fp);
 	  }
@@ -223,14 +202,11 @@ int main(void)
 		 //If we start with setting of "off" this works well.
 		 //If website re-writes "start" the user wants it to go!
 		 cll;
- 		 printf("Missing /tmp/VTsettings file\n");
-		 printf("X\nX\n");
-
+  		 printf("Missing /tmp/VTsettings file\n");
+ 		 printf("X\nX\n");
 	  }
 	  else
 	  {
-		 cll;
- 		 printf("Read /tmp/VTsettings file\n");
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
 			int latestCmdSpeed = atoi(readBuff);	
@@ -247,11 +223,6 @@ int main(void)
 				  firstRunWrite = 1;
 			}
 		 }
-		 else
-		 {
-			cll;
-			printf("Missing cmdSpeed\n");
-		 }
 		 
 		 if(fgets(readBuff, 20, fp) != NULL)
 		 {
@@ -265,11 +236,6 @@ int main(void)
 			   dirty = 1;
 			   writeDirty = 1;
 			}
-		 }
-		 else
-		 {
-			cll;
-			printf("Missing cmdBoost\n");
 		 }
 		 fclose(fp);
 		 remove("/tmp/VTsettings");
@@ -294,6 +260,8 @@ int main(void)
 		case 3: //Run
 			currentFreqSetpoint = currentRunVal; 
 			currentFreqSetpoint += currentCmdBoost * currentBoostVal;
+			if(currentFreqSetpoint<18)
+				currentFreqSetpoint = 18;
 			break;
 		default: //error
 			currentFreqSetpoint = 0; 
@@ -346,7 +314,7 @@ int main(void)
 
 
 		uint16_t desiredRunState = (currentFreqSetpoint >= 18);
-		if(firstRunWrite || desiredRunState==0)
+		if(firstRunWrite || desiredRunState == 0)
 		{
 			if(modbus_write_register(ctx, addr, desiredRunState) < 0)         
 			{
@@ -362,7 +330,7 @@ int main(void)
 		}
 		else
 		{
-			printf("X\n");
+			printf("\n");
 		}
 
 		if(modbus_write_register(ctx, addr2, currentFreqSetpoint) < 0)
@@ -380,25 +348,34 @@ int main(void)
 
 #endif
 	}
+
+
+int forceRetry = file_exists_delete("/tmp/VTforceretry");
+	time_t currTime = time(NULL);
+
+	if(actualFreq == 0 && currentFreqSetpoint == 0)
+	{
+          if(stopped == 0)
+	  {
+	    stopTime = currTime;
+	    stopped = 1;
+	  }
+	}
 	else
 	{
-		printf("X\nX\n");
-	}
-	
-
-	int forceRetry = file_exists_delete("/tmp/VTforceretry");
-	time_t currTime = time(NULL);
-	
-	int requiresImmediateUpdate = 0;
-	if( motorrpm != 0 || actualFreq != 0 || currentFreqSetpoint != 0 || dirty != 0)
-	{
-		requiresImmediateUpdate = 1;
-		lastImmediateUpdateRequiredTime = currTime;
+	  stopped = 0;
+	  //stopTime = currTime; //Lie! So we don't read unnecessarily, in the case where we're stopped and currTime wraps around but stopTime doesn't.
 	}
 
-	if(((requiresImmediateUpdate || currTime < lastImmediateUpdateRequiredTime + 10) && rs485Error == 0) || currTime > lastAttemptTime + 20 || forceRetry == 0)
+
+	//cll;
+        //printf("stopped=%d   stopDiff=%d\n", stopped, currTime - stopTime);
+	if(( (!stopped
+	|| (stopped && stopTime != time(NULL) && (currTime - stopTime) < 5) 
+	|| dirty != 0) && rs485Error == 0) 
+	|| currTime > lastAttemptTime + 20 || forceRetry == 0)
 	{
-	 	dirty = 0;
+	 	 dirty = 0;
 		 lastAttemptTime = currTime;
 		 numReads++;
 
@@ -426,13 +403,8 @@ int main(void)
 		 if(modbus_read_registers(ctx, 0x2100, 12, data) < 0)
 		 {
 			lastRead_validSpeed = 0;
-	  		cll;
 			fprintf(stderr, "Read failed: %s\n",
 			   modbus_strerror(errno));
-	  		
-			printf("X\n");
-			printf("X\n");
-			printf("X\n");
 			dirty = 1;
 			
 			rs485Error++;
@@ -440,11 +412,7 @@ int main(void)
 			   sleep(10);
 		 }
 		 else
-		 {
-	  		cll;
-			printf("Read successful\n");
-			
-			
+		 { 
 			rs485Error=0;
 			status1 = data[0];
 			status2 = data[1];
@@ -457,28 +425,17 @@ int main(void)
 			
 			kmh = 0.02743 * (double)motorrpm;
 
-			//double frac = kmh * 50 / 1000;
-			//double dist = frac / 3600;
-
-			//timeval now;
-		       	//gettimeofday(&now, NULL);
-			double uptime = ms_uptime();
-
-
 			double mm_per_km = 1000*100*10;
-			//double sec = ((now.tv_sec - lastSuccessfulRead.tv_sec) + (now.tv_usec - lastSuccessfulRead.tv_usec)/1000000);
+			double uptime = ms_uptime();
 			double sec = (uptime - lastSuccessfulRead)/1000;
-			double dist = kmh * (mm_per_km * sec/3600);
-
-			//gettimeofday(&lastSuccessfulRead, NULL);
+			double dist = kmh * (mm_per_km * sec/3600);	
 			lastSuccessfulRead = uptime;
 
 			cll;
-			printf("Seconds elapsed this sample: %f\n", sec); 
+			printf("Seconds elapsed this sample: %f\n", sec);
 			cll;
 			printf("mm travelled this sample: %f\n", dist); 
 
-			printf("X\n");
 			if(lastRead_validSpeed)
 			{
 				totaldistance += dist;
@@ -493,9 +450,6 @@ int main(void)
 	}	
 	else
 	{
-		 printf("X\n");
-		 printf("X\n");
-		 printf("X\n");
 		 cll;
 		 printf("rs485Error=%d   secondsLeft=%ld\n", rs485Error, 20+lastAttemptTime-currTime);
 	}
@@ -541,7 +495,7 @@ int main(void)
 	  }
 	  rename("/tmp/statusTmp", "/tmp/status");
 
-	  cll;
+    	  cll;
 	  printf("%.1f freq\n", actualFreq/10.0);
 	  cll;
 	  printf("%.1f output amps\n", outputAmps/10.0);
@@ -565,5 +519,3 @@ int main(void)
   }
    return 0;
 }
-
-
